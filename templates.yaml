@@ -1,0 +1,154 @@
+#Templates for Dev, Stage, and Jenkins Instances
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: AWS CloudFormation to create EC2 machine.  **WARNING** This template creates an Amazon EC2 instance. You will  be billed for the  AWS resources used if you create a stack from this template.
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Admin User"
+        Parameters: 
+          - ADMINUserName
+          - ADMINPublicKey
+          - USER2PublicKey
+          - USER3PublicKey
+      - 
+        Label: 
+          default: "EC2 Spec"
+        Parameters: 
+          - AMI
+          - IAMRole
+          - EC2Type
+          - HostName 
+
+    ParameterLabels: 
+
+      ADMINUserName: 
+        default: "Admin User Name"
+      ADMINPublicKey:
+        default: "Admin Public Key"
+      USER2PublicKey:
+        default: "User 2 Public Key"
+      USER3PublicKey:
+        default: "User 3 Public Key"
+  
+      IAMRole:
+        default: ""
+      AMI:
+        default: "AMI"
+      EC2Type:
+        default: "Instance Type"
+      HostName:
+        default: "Hostname?"
+
+Parameters:
+  
+  ADMINUserName:
+    Type: String
+    Default: e91user
+  
+  ADMINPublicKey:
+    Description: default to fadel
+    Type: String
+    Default: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDeHc1fcOf1zeO2csTUCssviSY9Wtrjw7MGmDb8Slc/F3pV9sg8u2UdOxe/d1ZtNKny6T7ZjOEcKKD2f5M9FHzN5jRUfHLGxwInii7BKgu0oZIepU4WiJb7MGof3YdIp6KIk0qty1c+b8pcgZU6JbeXYASU63vDc8P/IEToIEjfbeFnfJIHg1J1GBrYIsYYc0mB8Ytr3x6EpFE/bkMewTBX3Prp3Vcc3LKIim2MhqkPsfmBT2Y+SbeYGQGrzI60tsSklZyuETgfuEueMtdEt9E6BRvAJ7x2X4k1iDLJ+scXLoXI3tZHg+Gszlj294M1CrBXIPD1u4fQbXZjPATDuCnr
+  
+  USER2PublicKey:
+    Description: default to fadel
+    Type: String
+    Default: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDQJL83zkJkktGSibx47tpoaM0phXAWnjUMxOJcSBxca72Q4h0I+P0VG2emSJbX74CeT+IMGWp6TFUV29g6y6Gf3psqS9ObNRuuvPkekDprMTmQvT52sscCRyJKuxdquGveWK4VO3teQD83XR/iSwpyUYbyxiwoiqcIPMhkT+zA0es5lsdjo+zowrc5QFTCAyt9tN7wbvaV/QegUGxPZ4RK4eJ/Lf98qHyovpzf6uvgxxLr+zwuBrAq14/ljgF66EIoTtYcn1zVSghSRv627R6caEdrzoo5hLD9NaZn40OhHMsPBYXF8L1I5fVjjuNqPUKBWN9olVMzfXNEye6eWQlR
+  USER3PublicKey:
+    Description: default to fadel
+    Type: String
+    Default: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGjQpEr2w8PcbWK+ccAb2hb0lYUcIinHNhtDjLtUExhNH3vadSyyR4HutRUzgBV60/6aqValbMpDRTI5awyA5UQb5Wk+BTovlkcls8FZuITC9MiuWGp2iQxkBeL6rQitS8zGgf0MfSF/RZnDXyMWDriZRGR4/9UPi/kvnrIZXFQ3KT7G+AgNr6uBkd9KRX1DWJ+CAmy4bmE65CmeVDbVbVqqm7Cl7C8Gi+n5Li24v0L1cx0RyLkCdEUHK9oo2IpEpyKd9GleBUcfHrNatUcKCdbEgOf6yZyD9+oaVBTtX1ZeBBEz5KeLucZoypfCAUxbLObDK70U7oLzxXY/llEZSn
+  
+  Subnet:
+    Description: Subnet to host the EC2s 
+    Type: 'AWS::EC2::Subnet::Id'
+    Default: 'subnet-014646550048f71eb'
+    ConstraintDescription: must be a subnet where this machine reside
+   
+  SecurityGroup:
+    Description: Name of security groups 
+    Type: 'List<AWS::EC2::SecurityGroup::Id>'
+    Default: 'sg-013a3b9015307df83'
+   
+  EC2Type:
+    Description: instance type
+    Type: String
+    Default: t2.micro
+    ConstraintDescription: must be a valid EC2 instance type.
+  
+  AMI:
+    Description: AMI 
+    Type: String
+    Default: ami-0e1fe1fee170f9a98
+  
+  IAMRole:
+    Description: Insert the name of the profile role only, no arn accepted 
+    Type: String
+    Default: ""
+
+  HostName:
+    Description: What do you want the host name of your EC2 
+    Type: String
+    Default: .cscie91.harvard.edu
+  
+
+Resources:
+ 
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref AMI
+      InstanceType: !Ref EC2Type
+      SubnetId: !Ref Subnet
+      SecurityGroupIds: !Ref SecurityGroup
+      #DisableApiTermination: true
+      IamInstanceProfile: !Ref IAMRole
+      Tags:
+        - 
+          Key: Name
+          Value: !Sub ${AWS::StackName}
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash -xe
+              adduser ${ADMINUSERNAME}
+              echo ${ADMINUSERNAME} 'ALL=(ALL) NOPASSWD:ALL'>>/etc/sudoers.d/${ADMINUSERNAME}
+              mkdir /home/${ADMINUSERNAME}/.ssh
+              echo ${ADMINSSHKEY} > /home/${ADMINUSERNAME}/.ssh/authorized_keys
+              echo ${USER2SSHKEY} >> /home/${ADMINUSERNAME}/.ssh/authorized_keys
+              echo ${USER3SSHKEY} >> /home/${ADMINUSERNAME}/.ssh/authorized_keys
+              chown -R ${ADMINUSERNAME}.${ADMINUSERNAME} /home/${ADMINUSERNAME}/.ssh
+              chmod 700 /home/${ADMINUSERNAME}/.ssh
+              chmod 600 /home/${ADMINUSERNAME}/.ssh/authorized_keys
+              hostnamectl set-hostname  ${HOSTNAME} --static
+               
+              mkdir -p /root/.ssh
+              chmod 700 /root/.ssh
+              
+              chmod 600 /root/.ssh/authorized_keys
+              chown -R root.root /root/.ssh
+              
+            - ADMINUSERNAME: !Ref ADMINUserName
+              ADMINSSHKEY: !Ref ADMINPublicKey
+              USER2SSHKEY: !Ref USER2PublicKey
+              USER3SSHKEY: !Ref USER3PublicKey
+              HOSTNAME: !Ref HostName
+              
+              
+Outputs:
+  InstanceId:
+    Description: EC2 ID
+    Value: !Ref EC2Instance
+  
+  LocalIP:
+    Description: Local Ip
+    Value: !GetAtt EC2Instance.PrivateIp
+  
+  PublicIP:
+    Description: Public Ip
+    Value: !GetAtt EC2Instance.PublicIp
